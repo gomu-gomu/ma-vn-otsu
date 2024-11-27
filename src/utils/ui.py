@@ -137,9 +137,6 @@ def variance(threshold_fn):
     ax2.set_ylabel("Variance inter-classes")
     ax2.legend(loc="upper right")
 
-    print("Thresholds:", thresholds)
-    print("Variances:", variances)
-
     st.pyplot(fig)
   else:
     st.warning("Veuillez d'abord télécharger une image.")
