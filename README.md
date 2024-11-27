@@ -24,12 +24,11 @@ pip3 install -r requirements.txt
 Demo can be run with:
 
 ```sh
-python3 src
-streamlit run src/app.py
+streamlit run src/__main__.py
 ```
 
 ## Credits
 
-- O.Essamadi
-- A.Zouir
-- Z.Loulid
+- ESSAMADI Oussama
+- ZOUIR Amine
+- LOULID zakaria
