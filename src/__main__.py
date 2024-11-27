@@ -1,109 +1,98 @@
-import math
+import os
 import numpy as np
-from matplotlib import pyplot as plt
-from PIL import Image
-
-threshold_values = {}
-h = [1]
+import matplotlib.pyplot as plt
+from skimage.io import imread, imsave
 
 
-def Hist(img):
-  row, col = img.shape 
-  y = np.zeros(256)
-  for i in range(0,row):
-    for j in range(0,col):
-        y[img[i,j]] += 1
-  x = np.arange(0,256)
-  plt.bar(x, y, color='b', width=5, align='center', alpha=0.25)
-  plt.show()
-  return y
+def otsu_thresholding(image):
+    """
+    Perform Otsu's thresholding on a grayscale image.
+    :param image: Input grayscale image as a NumPy array.
+    :return: Tuple containing the threshold value and the binary image.
+    """
+    # Flatten the image into a 1D array for histogram calculation
+    pixel_counts, bin_edges = np.histogram(image, bins=256, range=(0, 256))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-def regenerate_img(img, threshold):
-  row, col = img.shape 
-  y = np.zeros((row, col))
-  for i in range(0,row):
-    for j in range(0,col):
-      if img[i,j] >= threshold:
-        y[i,j] = 255
-      else:
-        y[i,j] = 0
-  return y
+    # Total number of pixels
+    total_pixels = image.size
 
-def countPixel(h):
-  cnt = 0
-  for i in range(0, len(h)):
-    if h[i]>0:
-      cnt += h[i]
-  return cnt
+    # Initialize variables for Otsu's method
+    max_variance = 0
+    optimal_threshold = 0
 
-def wieght(s, e):
-  w = 0
-  for i in range(s, e):
-    w += h[i]
-  return w
+    sum_total = np.dot(pixel_counts, bin_centers)  # Sum of all pixel intensities
+    sum_background = 0
+    weight_background = 0
+    weight_foreground = 0
 
-def mean(s, e):
-  m = 0
-  w = wieght(s, e)
-  for i in range(s, e):
-    m += h[i] * i
-  
-  return m/float(w)
+    # Iterate through all possible thresholds
+    for t in range(256):
+        weight_background += pixel_counts[t]
+        weight_foreground = total_pixels - weight_background
 
-def variance(s, e):
-  v = 0
-  m = mean(s, e)
-  w = wieght(s, e)
-  for i in range(s, e):
-    v += ((i - m) **2) * h[i]
-  v /= w
-  return v
+        if weight_background == 0 or weight_foreground == 0:
+            continue
 
-def threshold(h):
-  cnt = countPixel(h)
-  for i in range(1, len(h)):
-    vb = variance(0, i)
-    wb = wieght(0, i) / float(cnt)
-    mb = mean(0, i)
-    
-    vf = variance(i, len(h))
-    wf = wieght(i, len(h)) / float(cnt)
-    mf = mean(i, len(h))
-    
-    V2w = wb * (vb) + wf * (vf)
-    V2b = wb * wf * (mb - mf)**2
-    
-    fw = open("trace.txt", "a")
-    fw.write('T='+ str(i) + "\n")
+        sum_background += t * pixel_counts[t]
+        mean_background = sum_background / weight_background
+        mean_foreground = (sum_total - sum_background) / weight_foreground
 
-    fw.write('Wb='+ str(wb) + "\n")
-    fw.write('Mb='+ str(mb) + "\n")
-    fw.write('Vb='+ str(vb) + "\n")
-    
-    fw.write('Wf='+ str(wf) + "\n")
-    fw.write('Mf='+ str(mf) + "\n")
-    fw.write('Vf='+ str(vf) + "\n")
+        # Calculate inter-class variance
+        variance_between = (
+            weight_background * weight_foreground * (mean_background - mean_foreground) ** 2
+        )
 
-    fw.write('within class variance='+ str(V2w) + "\n")
-    fw.write('between class variance=' + str(V2b) + "\n")
-    fw.write("\n")
-    
-    if not math.isnan(V2w):
-      threshold_values[i] = V2w
+        # Check if the current threshold maximizes the variance
+        if variance_between > max_variance:
+            max_variance = variance_between
+            optimal_threshold = t
 
-def get_optimal_threshold():
-  min_V2w = min(threshold_values.itervalues())
-  optimal_threshold = [k for k, v in threshold_values.iteritems() if v == min_V2w]
-  print('optimal threshold', optimal_threshold[0])
-  return optimal_threshold[0]
+    # Apply the optimal threshold to create the binary image
+    binary_image = (image >= optimal_threshold).astype(np.uint8) * 255
 
-image = Image.open('img.jpg').convert("L")
-img = np.asarray(image)
+    return optimal_threshold, binary_image
 
-h = Hist(img)
-threshold(h)
-op_thres = get_optimal_threshold()
 
-res = regenerate_img(img, op_thres)
-plt.imshow(res)
-plt.savefig("otsu.jpg")
+def main():
+    # Path to the fingerprint image
+    image_path = os.path.join("assets", "finger_print.jpg")
+    output_path = os.path.join("assets", "finger_print_binary.jpg")
+
+    if not os.path.exists(image_path):
+        print(f"Error: File '{image_path}' not found.")
+        return
+
+    # Load the image using matplotlib's imread and convert to grayscale (if not already)
+    image = imread(image_path, as_gray=True)
+
+    # Normalize the image to range [0, 255]
+    image = (image * 255).astype(np.uint8)
+
+    # Perform Otsu's thresholding
+    threshold, binary_image = otsu_thresholding(image)
+
+    # Display the original and thresholded images
+    plt.figure(figsize=(10, 5))
+
+    # Original image
+    plt.subplot(1, 2, 1)
+    plt.title("Original Grayscale Image")
+    plt.axis("off")
+    plt.imshow(image, cmap="gray")
+
+    # Binary image
+    plt.subplot(1, 2, 2)
+    plt.title(f"Binary Image (Threshold = {threshold})")
+    plt.axis("off")
+    plt.imshow(binary_image, cmap="gray")
+
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
+    imsave(output_path, binary_image.astype(np.uint8))
+    print(f"Binary image saved to '{output_path}'")
+
+if __name__ == "__main__":
+    main()
