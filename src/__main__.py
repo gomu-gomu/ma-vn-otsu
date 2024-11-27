@@ -1,14 +1,21 @@
-import os
+import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.io import imread, imsave
+from skimage.color import rgb2gray
+import os
+import io
 
 
 def otsu_thresholding(image):
     """
     Perform Otsu's thresholding on a grayscale image.
     :param image: Input grayscale image as a NumPy array.
-    :return: Tuple containing the threshold value and the binary image.
+    :return: Tuple containing:
+        - Optimal threshold value
+        - Binary image
+        - Histogram data (pixel counts and bin centers)
+        - Iteration data for visualization (thresholds, variances)
     """
     # Flatten the image into a 1D array for histogram calculation
     pixel_counts, bin_edges = np.histogram(image, bins=256, range=(0, 256))
@@ -20,6 +27,7 @@ def otsu_thresholding(image):
     # Initialize variables for Otsu's method
     max_variance = 0
     optimal_threshold = 0
+    iteration_data = []
 
     sum_total = np.dot(pixel_counts, bin_centers)  # Sum of all pixel intensities
     sum_background = 0
@@ -43,6 +51,9 @@ def otsu_thresholding(image):
             weight_background * weight_foreground * (mean_background - mean_foreground) ** 2
         )
 
+        # Store iteration data for visualization
+        iteration_data.append((t, variance_between))
+
         # Check if the current threshold maximizes the variance
         if variance_between > max_variance:
             max_variance = variance_between
@@ -51,48 +62,58 @@ def otsu_thresholding(image):
     # Apply the optimal threshold to create the binary image
     binary_image = (image >= optimal_threshold).astype(np.uint8) * 255
 
-    return optimal_threshold, binary_image
-
+    return optimal_threshold, binary_image, (pixel_counts, bin_centers), iteration_data
 
 def main():
-    # Path to the fingerprint image
-    image_path = os.path.join("assets", "finger_print.jpg")
-    output_path = os.path.join("assets", "finger_print_binary.jpg")
+    st.title("Algorithme d'Otsu")
+    st.markdown("""Cette application vous permet de traiter une image en utilisant le seuillage d'Otsu. 
+      Téléchargez une image en niveaux de gris, affichez l'histogramme et le processus d'itération, et voyez le résultat seuillé.""")
 
-    if not os.path.exists(image_path):
-        print(f"Error: File '{image_path}' not found.")
-        return
+    uploaded_file = st.file_uploader("Télécharger une image en niveaux de gris", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        image = imread(io.BytesIO(uploaded_file.read()))
+        if len(image.shape) == 3:
+            image = rgb2gray(image)
 
-    # Load the image using matplotlib's imread and convert to grayscale (if not already)
-    image = imread(image_path, as_gray=True)
+        image = (image * 255).astype(np.uint8)
 
-    # Normalize the image to range [0, 255]
-    image = (image * 255).astype(np.uint8)
+        # Display the original image
+        st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Perform Otsu's thresholding
-    threshold, binary_image = otsu_thresholding(image)
+        if st.button("Process Image"):
+            # Perform Otsu's thresholding
+            threshold, binary_image, histogram_data, iteration_data = otsu_thresholding(image)
 
-    # Display the original and thresholded images
-    plt.figure(figsize=(10, 5))
+            # Display the histogram with iteration steps
+            pixel_counts, bin_centers = histogram_data
+            thresholds, variances = zip(*iteration_data)
 
-    # Original image
-    plt.subplot(1, 2, 1)
-    plt.title("Original Grayscale Image")
-    plt.axis("off")
-    plt.imshow(image, cmap="gray")
+            st.subheader("Histogram and Iteration Process")
+            fig, ax1 = plt.subplots()
 
-    # Binary image
-    plt.subplot(1, 2, 2)
-    plt.title(f"Binary Image (Threshold = {threshold})")
-    plt.axis("off")
-    plt.imshow(binary_image, cmap="gray")
+            # Plot histogram
+            ax1.bar(bin_centers, pixel_counts, width=1, color="gray", alpha=0.7, label="Histogram")
+            ax1.set_xlabel("Pixel Intensity")
+            ax1.set_ylabel("Frequency")
+            ax1.legend(loc="upper left")
 
-    # Show the plot
-    plt.tight_layout()
-    plt.show()
+            # Plot variance vs. thresholds
+            ax2 = ax1.twinx()
+            ax2.plot(thresholds, variances, color="red", label="Variance")
+            ax2.axvline(threshold, color="blue", linestyle="--", label=f"Threshold = {threshold}")
+            ax2.set_ylabel("Variance")
+            ax2.legend(loc="upper right")
 
-    imsave(output_path, binary_image.astype(np.uint8))
-    print(f"Binary image saved to '{output_path}'")
+            st.pyplot(fig)
+
+            # Display the thresholded image
+            st.subheader("Thresholded Image")
+            st.image(binary_image, caption="Binary Image", use_container_width=True)
+
+            # Save the binary image
+            output_path = os.path.join("assets", "finger_print_binary.jpg")
+            imsave(output_path, binary_image.astype(np.uint8))
+            st.success(f"Binary image saved to '{output_path}'")
 
 if __name__ == "__main__":
-    main()
+  main()

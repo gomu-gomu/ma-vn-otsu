@@ -25,6 +25,7 @@ Demo can be run with:
 
 ```sh
 python3 src
+streamlit run src/app.py
 ```
 
 ## Credits
