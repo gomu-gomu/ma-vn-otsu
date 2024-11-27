@@ -1,13 +1,19 @@
-# Title
+# Thresholding
+### Otsu's Algorithm
 
-Exercices are inside of the [tp.pdf](./assets/tp.pdf) file.
-
+Sample images are in the [assets](./assets) folder.
 Source code is under the [src](./src/) folder
 
 ## Usage
 
-Solutions can be run via:
+Demo can be run with:
 
 ```sh
-runner src/file
+python3 src
 ```
+
+## Credits
+
+- O.Essamadi
+- A.Zouir
+- Z.Loulid
