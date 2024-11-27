@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from skimage.color import rgb2gray
 from skimage.io import imread, imsave
 
+from utils.otsu import thresholding
+
 
 
 def init():
@@ -93,13 +95,24 @@ def histogram():
 
   if "image" in st.session_state:
     image = st.session_state["image"]
-    pixel_counts, bin_centers = np.histogram(image, bins=256, range=(0, 256))
-    
-    fig, ax = plt.subplots()
-    ax.bar(bin_centers[:-1], pixel_counts, width=1, color="gray")
-    ax.set_title("Histogramme des intensités de pixels")
-    ax.set_xlabel("Intensité")
-    ax.set_ylabel("Nombre de pixels")
+    optimal_threshold, binary_image, histogram_data, iteration_data = thresholding(image)
+
+    fig = plt.figure(figsize=(12, 6))
+
+    st.session_state["binary_image"] = binary_image
+    st.session_state["histogram_data"] = histogram_data
+    st.session_state["iteration_data"] = iteration_data
+    st.session_state["optimal_threshold"] = optimal_threshold
+
+    pixel_counts, bin_centers = histogram_data    
+
+    plt.subplot(1, 2, 1)
+    plt.bar(bin_centers, pixel_counts, width=1, edgecolor='black', alpha=0.7)
+    plt.axvline(optimal_threshold, color='r', linestyle='--', label=f'Seuil Optimal: {optimal_threshold}')
+    plt.xlabel('Intensité des Pixels')
+    plt.ylabel('Nombre de Pixels')
+    plt.title('Histogramme avec Seuil Optimal')
+    plt.legend()
 
     st.pyplot(fig)
   else:
@@ -107,35 +120,40 @@ def histogram():
 
 
 
-def variance(threshold_fn):
+def variance():
   """
     The variance step.
     Visualizes the data on a histogram.
-
-    :param threshold_fn: The thresholding function
   """
   st.subheader("Étape 4 : Calcul de la variance inter-classes")
   
   if "image" in st.session_state:
-    image = st.session_state["image"]
-    _, _, histogram_data, iteration_data = threshold_fn(image)
-    pixel_counts, bin_edges = histogram_data
 
+    histogram_data = st.session_state["histogram_data"]
+    iteration_data = st.session_state["iteration_data"]
+    optimal_threshold = st.session_state["optimal_threshold"]
+
+    pixel_counts, bin_centers = histogram_data
     thresholds, variances = zip(*iteration_data)
-    min_variance_threshold = thresholds[np.argmin(variances)]
-    min_variance_value = min(variances)
 
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    ax1.bar(bin_edges, pixel_counts, width=1, color="gray", alpha=0.7, label="Histogramme")
-    ax1.set_xlabel("Intensité")
-    ax1.set_ylabel("Nombre de pixels")
-    ax1.legend(loc="upper left")
+    fig = plt.figure(figsize=(12, 6))
 
-    ax2 = ax1.twinx()
-    ax2.plot(thresholds, variances, color="red", label="Variance inter-classes")
-    ax2.axvline(min_variance_threshold, color="blue", linestyle="--", label=f"Seuil min: {min_variance_threshold} (Variance = {min_variance_value:.2f})")
-    ax2.set_ylabel("Variance inter-classes")
-    ax2.legend(loc="upper right")
+    plt.subplot(1, 2, 1)
+    plt.bar(bin_centers, pixel_counts, width=1, edgecolor='black', alpha=0.7)
+    plt.axvline(optimal_threshold, color='r', linestyle='--', label=f'Variance inter-classes Seuil: {optimal_threshold}')
+    plt.xlabel('Seuil Optimal')
+    plt.ylabel('Nombre de Pixels')
+    plt.title('Histogramme avec Seuil Optimal')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(thresholds, variances, color='b')
+    plt.xlabel('Seuil')
+    plt.ylabel('Variance inter-classes')
+    plt.title('Variance inter-classes vs Seuil')
+    plt.axvline(optimal_threshold, color='r', linestyle='--', label=f'Seuil Optimal: {optimal_threshold}')
+    plt.legend()
+    plt.tight_layout()
 
     st.pyplot(fig)
   else:
@@ -143,20 +161,17 @@ def variance(threshold_fn):
 
 
 
-def threshold(threshold_fn):
+def threshold():
   """
     The thresholding step.
     Applies the optimal threshold.
-
-    :param threshold_fn: The thresholding function
   """
   st.subheader("Étape 5 : Appliquer le seuil optimal")
 
   if "image" in st.session_state:
-    image = st.session_state["image"]
-    threshold, binary_image, _, _ = threshold_fn(image)
+    binary_image = st.session_state["binary_image"]
+    threshold = st.session_state["optimal_threshold"]
 
-    st.session_state["binary_image"] = binary_image
     st.write(f"Seuil optimal : {threshold}")
     st.image(binary_image, caption="Image binaire", use_container_width=True)
   else:

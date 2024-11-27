@@ -1,5 +1,4 @@
 import utils.ui as ui
-from utils.otsu import thresholding
 
 
 
@@ -16,10 +15,10 @@ def main():
     ui.histogram()
 
   elif step == 3:
-    ui.variance(thresholding)
+    ui.variance()
 
   elif step == 4:
-   ui.threshold(thresholding)
+   ui.threshold()
 
   elif step == 5:
     ui.save()
