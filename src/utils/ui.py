@@ -52,7 +52,7 @@ def upload():
   """
   st.subheader("Étape 1 : Télécharger une image")
 
-  uploaded_file = st.file_uploader("Téléchargez une image", type=["jpg", "png", "jpeg"])
+  uploaded_file = st.file_uploader("Téléchargez une image", type=["jpg", "jpeg"])
   if uploaded_file:
     image = imread(io.BytesIO(uploaded_file.read()))
 
@@ -118,14 +118,27 @@ def variance(threshold_fn):
   
   if "image" in st.session_state:
     image = st.session_state["image"]
-    _, _, _, iteration_data = threshold_fn(image)
+    _, _, histogram_data, iteration_data = threshold_fn(image)
+    pixel_counts, bin_edges = histogram_data
+
     thresholds, variances = zip(*iteration_data)
-    
-    fig, ax = plt.subplots()
-    ax.plot(thresholds, variances, color="red")
-    ax.set_title("Variance inter-classes par seuil")
-    ax.set_xlabel("Seuil")
-    ax.set_ylabel("Variance inter-classes")
+    min_variance_threshold = thresholds[np.argmin(variances)]
+    min_variance_value = min(variances)
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    ax1.bar(bin_edges, pixel_counts, width=1, color="gray", alpha=0.7, label="Histogramme")
+    ax1.set_xlabel("Intensité")
+    ax1.set_ylabel("Nombre de pixels")
+    ax1.legend(loc="upper left")
+
+    ax2 = ax1.twinx()
+    ax2.plot(thresholds, variances, color="red", label="Variance inter-classes")
+    ax2.axvline(min_variance_threshold, color="blue", linestyle="--", label=f"Seuil min: {min_variance_threshold} (Variance = {min_variance_value:.2f})")
+    ax2.set_ylabel("Variance inter-classes")
+    ax2.legend(loc="upper right")
+
+    print("Thresholds:", thresholds)
+    print("Variances:", variances)
 
     st.pyplot(fig)
   else:
