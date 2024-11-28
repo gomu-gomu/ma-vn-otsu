@@ -38,7 +38,7 @@ python3 src/cli.py assets/finger_print.jpg
 This demo comes in with a docker image that can be run with:
 
 ```sh
-./scripts/run.sh
+./scripts/run.sh [web|cli]
 ```
 
 ## Credits
