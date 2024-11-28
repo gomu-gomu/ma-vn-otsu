@@ -1,5 +1,6 @@
 numpy
 pillow
+argparse
 streamlit
 matplotlib
 scikit-image
