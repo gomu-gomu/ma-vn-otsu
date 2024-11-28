@@ -21,10 +21,16 @@ pip3 install -r requirements.txt
 
 ## Usage
 
-Demo can be run with:
+Web demo can be run with:
 
 ```sh
 streamlit run src/__main__.py
+```
+
+Cli demo can be run with:
+
+```sh
+python3 src/cli.py assets/finger_print.jpg
 ```
 
 ## Docker
