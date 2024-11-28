@@ -27,6 +27,14 @@ Demo can be run with:
 streamlit run src/__main__.py
 ```
 
+## Docker
+
+This demo comes in with a docker image that can be run with:
+
+```sh
+./scripts/run.sh
+```
+
 ## Credits
 
 - ESSAMADI Oussama
