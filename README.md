@@ -24,7 +24,7 @@ pip3 install -r requirements.txt
 Web demo can be run with:
 
 ```sh
-streamlit run src/__main__.py
+streamlit run src/web.py
 ```
 
 Cli demo can be run with:
